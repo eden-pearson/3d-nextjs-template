@@ -74,7 +74,7 @@ export default function Page() {
             my heart lies at the crossroads of imagination and innovation.
             fortunate to work with both artistic and technical minds, continually learning the importance of functionality, aesthetics and user experience.
             every collaboration is an opportunity to unleash visionary creativity and state of the art technology.
-            let's collaborate and bring new visions to life together!
+            lets collaborate and bring new visions to life together!
           </p>
         </div>
       </div>
