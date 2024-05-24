@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, PresentationControls } from '@react-three/drei'
+import { OrbitControls, PresentationControls, Float } from '@react-three/drei'
 //import { EffectComposer, SSAO, Bloom, DepthOfField, Vignette, BrightnessContrast, HueSaturation } from '@react-three/postprocessing'
 
 //import { MeshBasicMaterial } from 'three'
@@ -18,7 +18,9 @@ export default function Flowers() {
         polar={[-Math.PI / 3, Math.PI / 3]}
         azimuth={[-Math.PI / 1.4, Math.PI / 2]}
       > */}
-      <Splat scale={3} rotation={[0, -0.7 * Math.PI, 0]} src='flowers_white.splat' />
+      <Float>
+        <Splat scale={3} rotation={[0, -0.7 * Math.PI, 0]} src='flowers_white.splat' />
+      </Float>
       {/*       </PresentationControls> */}
     </>
   )
