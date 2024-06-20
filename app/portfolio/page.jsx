@@ -25,7 +25,7 @@ export default function Page() {
     const scroll = useScroll()
     const [hovered, setHovered] = useState(null)
     const [selected, setSelected] = useState(null)
-    const [isModal, setIsModal] = useState(false)
+    const [isModalBig, setIsModalBig] = useState(false)
 
     useFrame((state, delta) => {
       ref.current.rotation.y = -scroll.offset * (Math.PI * 2) // Rotate contents
@@ -36,43 +36,43 @@ export default function Page() {
 
     const handlePointerOver = useCallback(
       (index) => {
-        if (!isModal) setHovered(index)
+        if (!isModalBig) setHovered(index)
       },
-      [isModal],
+      [isModalBig],
     )
 
     const handlePointerOut = useCallback(() => {
-      if (!isModal) setHovered(null)
-    }, [isModal])
+      if (!isModalBig) setHovered(null)
+    }, [isModalBig])
 
     const handleClick = useCallback((item) => {
       setSelected(item)
-      setIsModal(true)
+      setIsModalBig(true)
     }, [])
 
     const handleClickAway = useCallback(() => {
-      setIsModal(false)
+      setIsModalBig(false)
       setSelected(null)
     }, [])
 
     return (
       <group ref={ref} {...props}>
         <Cards
-          category='jedna'
+          category='Recent Projects'
           from={0}
           len={Math.PI / 4}
           onPointerOver={handlePointerOver}
           onPointerOut={handlePointerOut}
           onClick={handleClick}
           data={portfolioData}
-          isModal={isModal}
+          isModalBig={isModalBig}
         />
         <ActiveCard
           hovered={hovered}
           selected={selected}
           setSelected={setSelected}
-          isModal={isModal}
-          setIsModal={setIsModal}
+          isModalBig={isModalBig}
+          setIsModalBig={setIsModalBig}
           onClickAway={handleClickAway}
         />
       </group>
@@ -88,7 +88,7 @@ export default function Page() {
     onPointerOver,
     onPointerOut,
     onClick,
-    isModal,
+    isModalBig,
     ...props
   }) {
     const [hovered, setHovered] = useState(null)
@@ -110,12 +110,12 @@ export default function Page() {
               onPointerOver={(e) => (e.stopPropagation(), setHovered(i), onPointerOver(i))}
               onPointerOut={() => (setHovered(null), onPointerOut(null))}
               onClick={() => onClick(item)}
-              position={[Math.sin(angle) * radius, isModal ? -5 : 0, Math.cos(angle) * radius]} // Move down if modal is open
+              position={[Math.sin(angle) * radius, isModalBig ? -5 : 0, Math.cos(angle) * radius]}
               rotation={[0, Math.PI / 2 + angle, 0]}
               active={hovered !== null}
               hovered={hovered === i}
               url={item.image}
-              isModal={isModal}
+              isModalBig={isModalBig}
             />
           )
         })}
@@ -123,13 +123,12 @@ export default function Page() {
     )
   }
 
-  function Card({ url, active, hovered, onClick, isModal, ...props }) {
+  function Card({ url, active, hovered, onClick, isModalBig, ...props }) {
     const ref = useRef()
     useFrame((state, delta) => {
-      const f = hovered ? 1.4 : active ? 1.25 : 1
-      easing.damp3(ref.current.position, [0, hovered ? 0.25 : 0, 0], 0.1, delta)
-      easing.damp3(ref.current.scale, [1.618 * f, 1 * f, 1], 0.15, delta)
-      ref.current.material.opacity = isModal ? 0.3 : 1 // Make semi-transparent if modal is open
+      easing.damp3(ref.current.position, [0, hovered ? 0.6 : 0, 0], 0.1, delta)
+
+      ref.current.material.opacity = isModalBig ? 0.3 : 1
     })
     return (
       <group {...props} onClick={onClick}>
@@ -138,33 +137,12 @@ export default function Page() {
     )
   }
 
-  function ActiveCard({ hovered, selected, setSelected, isModal, setIsModal, onClickAway, ...props }) {
+  function ActiveCard({ hovered, selected, setSelected, isModalBig, setIsModalBig, onClickAway, ...props }) {
     const ref = useRef()
 
-    useLayoutEffect(() => {
-      if (ref.current && ref.current.material) {
-        ref.current.material.zoom = 0.8
-      }
-    }, [hovered])
-
-    useFrame((state, delta) => {
-      if (ref.current && ref.current.material) {
-        easing.damp(ref.current.material, 'zoom', 1, 0.5, delta)
-        const targetOpacity = hovered !== null || isModal ? 1 : 0
-        easing.damp(ref.current.material, 'opacity', targetOpacity, 0.3, delta)
-      }
-    })
-
     return (
-      <Billboard {...props} onClick={isModal ? onClickAway : null}>
-        {hovered !== null && !isModal && selected && (
-          <>
-            <Text font={suspend(inter).default} fontSize={0.5} position={[0, 0, 0]} anchorX='left' color='black'>
-              {selected.title}
-            </Text>
-          </>
-        )}
-        {isModal && selected && (
+      <Billboard {...props} onClick={isModalBig ? onClickAway : null}>
+        {selected && (
           <>
             <Text
               font={suspend(inter).default}
