@@ -1,12 +1,12 @@
 'use client'
 
 import * as THREE from 'three'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, useEffect } from 'react'
 import { Canvas, extend, useFrame } from '@react-three/fiber'
 import { Image, ScrollControls, useScroll, Billboard, Text } from '@react-three/drei'
 import { suspend } from 'suspend-react'
-import { generate } from 'random-words'
 import { easing, geometry } from 'maath'
+import portfolioData from '../../public/portfolio.json'
 
 extend(geometry)
 const inter = import('@pmndrs/assets/fonts/inter_regular.woff')
@@ -24,6 +24,7 @@ export default function Page() {
     const ref = useRef()
     const scroll = useScroll()
     const [hovered, hover] = useState(null)
+    const [selected, setSelected] = useState(null)
     useFrame((state, delta) => {
       ref.current.rotation.y = -scroll.offset * (Math.PI * 2) // Rotate contents
       state.events.update() // Raycasts every frame rather than on pointer-move
@@ -32,31 +33,16 @@ export default function Page() {
     })
     return (
       <group ref={ref} {...props}>
-        <Cards category='spring' from={0} len={Math.PI / 4} onPointerOver={hover} onPointerOut={hover} />
         <Cards
-          category='summer'
-          from={Math.PI / 4}
-          len={Math.PI / 2}
-          position={[0, 0.4, 0]}
+          category='jedna'
+          from={0}
+          len={Math.PI / 4}
           onPointerOver={hover}
           onPointerOut={hover}
+          onClick={setSelected}
+          data={portfolioData}
         />
-        <Cards
-          category='autumn'
-          from={Math.PI / 4 + Math.PI / 2}
-          len={Math.PI / 2}
-          onPointerOver={hover}
-          onPointerOut={hover}
-        />
-        <Cards
-          category='winter'
-          from={Math.PI * 1.25}
-          len={Math.PI * 2 - Math.PI * 1.25}
-          position={[0, -0.4, 0]}
-          onPointerOver={hover}
-          onPointerOut={hover}
-        />
-        <ActiveCard hovered={hovered} />
+        <ActiveCard hovered={hovered} selected={selected} />
       </group>
     )
   }
@@ -69,10 +55,11 @@ export default function Page() {
     radius = 5.25,
     onPointerOver,
     onPointerOut,
+    onClick,
     ...props
   }) {
     const [hovered, hover] = useState(null)
-    const amount = Math.round(len * 22)
+    const amount = len * 6
     const textPosition = from + (amount / 2 / amount) * len
     return (
       <group {...props}>
@@ -81,18 +68,19 @@ export default function Page() {
             {category}
           </Text>
         </Billboard>
-        {Array.from({ length: amount - 3 /* minus 3 images at the end, creates a gap */ }, (_, i) => {
+        {data.map((item, i) => {
           const angle = from + (i / amount) * len
           return (
             <Card
-              key={angle}
+              key={item.id}
               onPointerOver={(e) => (e.stopPropagation(), hover(i), onPointerOver(i))}
               onPointerOut={() => (hover(null), onPointerOut(null))}
+              onClick={() => onClick(item)}
               position={[Math.sin(angle) * radius, 0, Math.cos(angle) * radius]}
               rotation={[0, Math.PI / 2 + angle, 0]}
               active={hovered !== null}
               hovered={hovered === i}
-              url={`/img${Math.floor(i % 10) + 1}.jpg`}
+              url={item.image}
             />
           )
         })}
@@ -100,7 +88,7 @@ export default function Page() {
     )
   }
 
-  function Card({ url, active, hovered, ...props }) {
+  function Card({ url, active, hovered, onClick, ...props }) {
     const ref = useRef()
     useFrame((state, delta) => {
       const f = hovered ? 1.4 : active ? 1.25 : 1
@@ -108,33 +96,55 @@ export default function Page() {
       easing.damp3(ref.current.scale, [1.618 * f, 1 * f, 1], 0.15, delta)
     })
     return (
-      <group {...props}>
+      <group {...props} onClick={onClick}>
         <Image ref={ref} transparent radius={0.075} url={url} scale={[1.618, 1, 1]} side={THREE.DoubleSide} />
       </group>
     )
   }
 
-  function ActiveCard({ hovered, ...props }) {
+  function ActiveCard({ hovered, selected, ...props }) {
     const ref = useRef()
-    const name = useMemo(() => generate({ exactly: 2 }).join(' '), [hovered])
-    useLayoutEffect(() => void (ref.current.material.zoom = 0.8), [hovered])
+
+    useLayoutEffect(() => {
+      if (ref.current && ref.current.material) {
+        ref.current.material.zoom = 0.8
+      }
+    }, [hovered])
+
     useFrame((state, delta) => {
-      easing.damp(ref.current.material, 'zoom', 1, 0.5, delta)
-      easing.damp(ref.current.material, 'opacity', hovered !== null, 0.3, delta)
+      if (ref.current && ref.current.material) {
+        easing.damp(ref.current.material, 'zoom', 1, 0.5, delta)
+        easing.damp(ref.current.material, 'opacity', hovered !== null, 0.3, delta)
+      }
     })
+
     return (
       <Billboard {...props}>
         <Text font={suspend(inter).default} fontSize={0.5} position={[2.15, 3.85, 0]} anchorX='left' color='black'>
-          {hovered !== null && `${name}\n${hovered}`}
+          {hovered !== null && selected ? `${selected.title}\n${hovered}` : null}
         </Text>
-        <Image
-          ref={ref}
-          transparent
-          radius={0.3}
-          position={[0, 1.5, 0]}
-          scale={[3.5, 1.618 * 3.5, 0.2, 1]}
-          url={`/img${Math.floor(hovered % 10) + 1}.jpg`}
-        />
+        {selected && (
+          <>
+            <Text font={suspend(inter).default} fontSize={0.5} position={[2.15, 3.85, 0]} anchorX='left' color='black'>
+              {selected.title}
+            </Text>
+            <Text font={suspend(inter).default} fontSize={0.3} position={[2.15, 3.5, 0]} anchorX='left' color='black'>
+              {selected.description}
+            </Text>
+          </>
+        )}
+        {selected && (
+          <Image
+            ref={ref}
+            transparent
+            radius={0.3}
+            position={[0, 1.5, 0]}
+            scale={[3.5, 1.618 * 3.5, 0.2, 1]}
+            url={selected.image} // Ensure selected is not null
+            side={THREE.DoubleSide}
+            alt={selected.title}
+          />
+        )}
       </Billboard>
     )
   }
