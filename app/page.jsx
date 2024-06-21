@@ -81,6 +81,13 @@ export default function Page() {
             <p className='mb-8 text-lg text-gray-600'>
               lets collaborate and bring new <span className='text-xl font-bold'>visions</span> to life together!
             </p>
+            <p className='mb-8 text-lg text-gray-600'>
+              Check out my{' '}
+              <a href='/portfolio' className='text-blue-500 underline'>
+                portfolio
+              </a>{' '}
+              to see more of my work.
+            </p>
           </div>
         </div>
       </div>

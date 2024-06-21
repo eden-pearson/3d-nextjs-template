@@ -1,21 +1,36 @@
 'use client'
 
 import * as THREE from 'three'
+import { Mesh, PlaneGeometry } from 'three'
 import { useLayoutEffect, useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { Canvas, extend, useFrame } from '@react-three/fiber'
-import { Image, ScrollControls, useScroll, Billboard, Text, Stars } from '@react-three/drei'
+import {
+  Image,
+  ScrollControls,
+  useScroll,
+  Billboard,
+  Text,
+  Stars,
+  Environment,
+  MeshReflectorMaterial,
+  MeshDistortMaterial,
+  MeshRefractionMaterial,
+  MeshTransmissionMaterial,
+} from '@react-three/drei'
 import { suspend } from 'suspend-react'
 import { easing, geometry } from 'maath'
 import portfolioData from '../../public/portfolio.json'
 
 extend(geometry)
+extend({ PlaneGeometry })
 const inter = import('@pmndrs/assets/fonts/inter_regular.woff')
-
+const bridge = import('@pmndrs/assets/hdri/dawn.exr.js')
 export default function Page() {
   return (
     <Canvas dpr={[1, 1.5]}>
       <ScrollControls pages={4} infinite>
         <Scene position={[0, 1.5, 0]} />
+        <Environment files={suspend(bridge).default} background={true} backgroundBlurriness={0.4} />
       </ScrollControls>
     </Canvas>
   )
@@ -45,10 +60,12 @@ export default function Page() {
       if (!isModalBig) setHovered(null)
     }, [isModalBig])
 
-    const handleClick = useCallback((item) => {
-      setSelected(item)
-      setIsModalBig(true)
-    }, [])
+    const handleClick = useCallback(() => {
+      if (hovered !== null) {
+        setSelected(portfolioData[hovered])
+        setIsModalBig(true)
+      }
+    }, [hovered])
 
     const handleClickAway = useCallback(() => {
       setIsModalBig(false)
@@ -68,7 +85,7 @@ export default function Page() {
           isModalBig={isModalBig}
         />
         <ActiveCard
-          hovered={hovered}
+          hovered={hovered !== null ? portfolioData[hovered] : null} // Pass the correct data
           selected={selected}
           setSelected={setSelected}
           isModalBig={isModalBig}
@@ -126,13 +143,14 @@ export default function Page() {
   function Card({ url, active, hovered, onClick, isModalBig, ...props }) {
     const ref = useRef()
     useFrame((state, delta) => {
-      easing.damp3(ref.current.position, [0, hovered ? 0.6 : 0, 0], 0.1, delta)
-
+      const f = hovered ? 1.4 : active ? 1.25 : 1
+      easing.damp3(ref.current.position, [0, hovered ? 0.25 : 0, 0], 0.1, delta)
+      easing.damp3(ref.current.scale, [1.618 * f, 1 * f, 1], 0.15, delta)
       ref.current.material.opacity = isModalBig ? 0.3 : 1
     })
     return (
       <group {...props} onClick={onClick}>
-        <Image ref={ref} transparent radius={0.075} url={url} scale={[1.618, 1, 1]} side={THREE.DoubleSide} />
+        <Image ref={ref} transparent radius={0.075} url={url || ''} scale={[1.618, 1, 1]} side={THREE.DoubleSide} />
       </group>
     )
   }
@@ -140,31 +158,97 @@ export default function Page() {
   function ActiveCard({ hovered, selected, setSelected, isModalBig, setIsModalBig, onClickAway, ...props }) {
     const ref = useRef()
 
+    const handleClickAway = () => {
+      setIsModalBig(false)
+      setSelected(null)
+    }
+
+    useFrame((state, delta) => {
+      if (ref.current) {
+        easing.damp(ref.current.material, 'zoom', 1, 0.5, delta)
+        easing.damp(ref.current.material, 'opacity', hovered !== null, 0.3, delta)
+      }
+    })
+
     return (
-      <Billboard {...props} onClick={isModalBig ? onClickAway : null}>
+      <Billboard {...props}>
         {selected && (
           <>
             <Text
               font={suspend(inter).default}
-              fontSize={0.5}
-              position={[2.15, 3.85, 0.5]}
-              anchorX='left'
-              color='black'
+              fontSize={0.3}
+              position={[-7.5, 4, 1]}
+              anchorX='center'
+              color='red'
+              maxWidth={5}
+              onClick={() => handleClickAway()}
             >
-              {selected.title}
+              back
             </Text>
-            <Text font={suspend(inter).default} fontSize={0.3} position={[2.15, 3.5, 0.5]} anchorX='left' color='black'>
+            <Text
+              font={suspend(inter).default}
+              fontSize={0.4}
+              position={[6, 3.5, 1]}
+              anchorX='center'
+              padding={[0.1, 0.2]} // Add padding
+              maxWidth={5} // Set maxWidth to control text wrapping
+            >
               {selected.description}
+              <MeshTransmissionMaterial
+                resolution={1024}
+                emissive='grey'
+                distortion={0.7}
+                color='white'
+                thickness={1}
+                anisotropy={1}
+                background='white'
+              />
             </Text>
+            {selected.link && (
+              <Text
+                font={suspend(inter).default}
+                fontSize={0.3}
+                position={[-6, -6, 1]}
+                anchorX='right'
+                color='blue'
+                maxWidth={5}
+                onClick={() => window.open(selected.link, '_blank')}
+              >
+                featured link
+              </Text>
+            )}
             <Image
               ref={ref}
               transparent
               radius={0.3}
-              position={[0, 0, 0]}
+              position={[-4, -1, 0]}
               scale={[10, 10, 1]}
-              url={selected.image}
+              url={selected.image || ''}
               side={THREE.DoubleSide}
               alt={selected.title}
+            />
+          </>
+        )}
+        {hovered !== null && !selected && (
+          <>
+            <Text
+              font={suspend(inter).default}
+              fontSize={0.5}
+              position={[0, 3, 0]}
+              anchorX='center'
+              color='black'
+              maxWidth={5} // Set maxWidth to control text wrapping
+            >
+              {hovered.title}
+            </Text>
+            <Image
+              transparent
+              radius={0.3}
+              position={[0, 0, -1]}
+              scale={[3, 3, 1]}
+              url={hovered.image || ''}
+              side={THREE.DoubleSide}
+              alt={hovered.title}
             />
           </>
         )}
